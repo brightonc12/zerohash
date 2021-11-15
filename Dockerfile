@@ -1,4 +1,4 @@
-FROM golang:1.15-alpine AS builder
+FROM golang:1.17-alpine AS builder
 
 ENV GO111MODULE=on \
     CGO_ENABLED=0 \
@@ -16,7 +16,7 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN go build -ldflags="-w -s" -o  dist/main .
+RUN go build -ldflags="-w -s" -o  dist/main cmd/server.go
 
 FROM alpine:3.13
 
