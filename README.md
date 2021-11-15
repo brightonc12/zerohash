@@ -84,7 +84,7 @@ container port and services to access our app services
 
 VWap Calculator
 ====
-
+![alt vwap](https://zamezii-warehouse-test.s3.us-east-2.amazonaws.com/images/temp/site/vwap.png)
 
 
 Instructions
