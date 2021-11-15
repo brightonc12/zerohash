@@ -12,6 +12,21 @@ import (
 	"zerohash/internal/domain"
 )
 
+var (
+	testMatch = &domain.MatchMsg{
+		Type:          "match",
+		TradeID:       234101804,
+		MarkerOrderId: "a5c0a62a-69e1-4b0c-ae56-e838a1533f13",
+		TakerOrderId:  "1d3409a6-9774-4de2-8923-aeabb6a87aa9",
+		Side:          "buy",
+		Size:          "0.004505",
+		Price:         "66589.06",
+		ProductID:     "BTC-USD",
+		Sequence:      30961859527,
+		Time:          "2021-11-10T08:16:28.507006Z",
+	}
+)
+
 func TestNewTraderReader(t *testing.T) {
 	t.Run("should return valid Trade Reader", func(t *testing.T) {
 		r := NewTraderReader([]*domain.Currency{})
@@ -97,24 +112,42 @@ func TestReader_Subscribe(t *testing.T) {
 }
 
 func TestReader_ReadTradeToChan(t *testing.T) {
-
 	tests := []struct {
 		name string
 	}{
-		{"s"},
+		{"receive from websocket and send decoded trade to chan"},
 	}
 
 	for _, tt := range tests {
+		done := make(chan bool)
 
 		t.Run(tt.name, func(t *testing.T) {
-			s := setUpWSServerTest(successRequest(t))
+			s := setUpWSServerTest(WSRequest(t, func(conn *websocket.Conn) {
+				conn.WriteJSON(testMatch)
+				for {
+					if _, _, err := conn.ReadMessage(); err != nil {
+						return
+					}
+				}
+			}, done))
 			defer s.Close()
-			r := NewTraderReader([]*domain.Currency{})
+
 			wg := &sync.WaitGroup{}
 			tradeChan := make(chan *domain.Trade)
 			ctx := context.Background()
 
-			r.ReadTradeToChan(ctx, tradeChan, wg)
+			r := NewTraderReader([]*domain.Currency{})
+			defer r.Close()
+
+			r.Connect()
+			wg.Add(1)
+			go r.ReadTradeToChan(ctx, tradeChan, wg)
+
+			trade := <-tradeChan
+
+			assert.Equal(t, trade.Currency, testMatch.ProductID)
+			assert.Equal(t, trade.Price.String(), testMatch.Price)
+			assert.Equal(t, trade.Quantity.String(), testMatch.Size)
 		})
 	}
 }
