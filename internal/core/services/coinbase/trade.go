@@ -13,13 +13,11 @@ import (
 
 var (
 	socketUrl = "wss://ws-feed.exchange.coinbase.com"
-
-
-
-	)
+)
 
 type TraderReader interface {
 	Connect() error
+	Close() error
 	Subscribe() error
 	ReadTradeToChan(
 		ctx context.Context,
@@ -43,6 +41,11 @@ func (r *reader) Connect() error {
 	return nil
 }
 
+func (r *reader) Close() error {
+
+	return r.conn.Close()
+}
+
 func (r *reader) Subscribe() error {
 
 	var pIds []string
@@ -52,8 +55,8 @@ func (r *reader) Subscribe() error {
 	}
 
 	subMsg := &domain.CoinbaseSubscribeMsg{
-		Type: "subscribe",
-		Channels:    []string{"matches"},
+		Type:       "subscribe",
+		Channels:   []string{"matches"},
 		ProductIDs: pIds,
 	}
 
@@ -132,7 +135,7 @@ func (r *reader) extractTradeFromMsg(match *domain.MatchMsg) (*domain.Trade, err
 
 func (r *reader) Unsubscribe() error {
 	unsubMsg := &domain.CoinbaseUnsubscribeMsg{
-		Type: "unsubscribe",
+		Type:     "unsubscribe",
 		Channels: []string{"matches"},
 	}
 	unsubEvt, _ := json.Marshal(unsubMsg)

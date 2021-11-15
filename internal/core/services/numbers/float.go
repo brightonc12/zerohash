@@ -12,14 +12,13 @@ func NewZeroBigFloat() *big.Float {
 }
 
 func ParseBigFloat(str string) (*big.Float, error) {
-	float := NewZeroBigFloat()
-	float, _, err := float.Parse(str, 10)
+	f := NewZeroBigFloat()
+	f, _, err := f.Parse(str, 10)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse float string: %s, error: %v", str, err)
+		return nil, fmt.Errorf("failed to parse string: '%s' error: %v", str, err)
 	}
-	return float, nil
+	return f, nil
 }
-
 
 func NewBigFloat(num float64) *big.Float {
 	float := new(big.Float)

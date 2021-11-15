@@ -8,9 +8,9 @@ import (
 
 var (
 	testWindow = 10
-	testTrade = &domain.Trade{
+	testTrade  = &domain.Trade{
 		Currency: domain.Currencies.EthUsd.Name,
-		Price: numbers.NewBigFloat(40.3),
+		Price:    numbers.NewBigFloat(40.3),
 		Quantity: numbers.NewBigFloat(2),
 	}
 )
@@ -18,12 +18,9 @@ var (
 func TestImpl_PublishToSingleCalcChan(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    string
-		from     string
-		to       string
 		expected bool
 	}{
-		{name: "before time", input: "Sunday 1AM - 1PM", from: "9AM", to: "5PM", expected: false},
+		{name: "before time", expected: false},
 	}
 
 	tradeChan := make(chan *domain.Trade)

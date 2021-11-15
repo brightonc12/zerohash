@@ -1,11 +1,13 @@
 package coinbase
 
 import (
+	"context"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"zerohash/internal/domain"
 )
@@ -54,7 +56,12 @@ func TestReader_Subscribe(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			done := make(chan bool, 1)
+			currencies := []*domain.Currency{
+				domain.Currencies.EthBtc,
+				domain.Currencies.BtcUsd,
+				domain.Currencies.EthUsd,
+			}
+			done := make(chan bool)
 
 			s := setUpWSServerTest(WSRequest(t, func(conn *websocket.Conn) {
 				if !tt.returnErr {
@@ -63,20 +70,26 @@ func TestReader_Subscribe(t *testing.T) {
 					assert.NoError(t, err)
 					assert.Equal(t, "subscribe", m.Type)
 					assert.Equal(t, []string{"matches"}, m.Channels)
-					assert.Equal(t, 3, len(m.ProductIDs))
+					assert.Equal(t, len(currencies), len(m.ProductIDs))
 				}
-				done <- true
-			}))
+			}, done))
 
 			defer s.Close()
-			r := NewTraderReader([]*domain.Currency{})
+			r := NewTraderReader(currencies)
+			r.Connect()
+
+			if tt.returnErr {
+				r.Close()
+			} else {
+				defer r.Close()
+			}
 
 			err := r.Subscribe()
 			if tt.returnErr {
 				assert.Error(t, err)
-				<- done
+				<-done
 			} else {
-				<- done
+				<-done
 				assert.NoError(t, err)
 			}
 		})
@@ -84,14 +97,75 @@ func TestReader_Subscribe(t *testing.T) {
 }
 
 func TestReader_ReadTradeToChan(t *testing.T) {
+
+	tests := []struct {
+		name string
+	}{
+		{"s"},
+	}
+
+	for _, tt := range tests {
+
+		t.Run(tt.name, func(t *testing.T) {
+			s := setUpWSServerTest(successRequest(t))
+			defer s.Close()
+			r := NewTraderReader([]*domain.Currency{})
+			wg := &sync.WaitGroup{}
+			tradeChan := make(chan *domain.Trade)
+			ctx := context.Background()
+
+			r.ReadTradeToChan(ctx, tradeChan, wg)
+		})
+	}
 }
 
 func TestReader_Unsubscribe(t *testing.T) {
+	tests := []struct {
+		name      string
+		returnErr bool
+	}{
+		{"unsubscribe fail", true},
+		{"unsubscribe succeed", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			currencies := []*domain.Currency{
+				domain.Currencies.EthBtc,
+				domain.Currencies.BtcUsd,
+				domain.Currencies.EthUsd,
+			}
+			done := make(chan bool)
 
-}
+			s := setUpWSServerTest(WSRequest(t, func(conn *websocket.Conn) {
+				if !tt.returnErr {
+					m := &domain.CoinbaseUnsubscribeMsg{}
+					err := conn.ReadJSON(m)
+					assert.NoError(t, err)
+					assert.Equal(t, "unsubscribe", m.Type)
+					assert.Equal(t, []string{"matches"}, m.Channels)
+				}
+			}, done))
 
-func TestExtractTradeFromMsg(t *testing.T) {
+			defer s.Close()
+			r := NewTraderReader(currencies)
+			r.Connect()
 
+			if tt.returnErr {
+				r.Close()
+			} else {
+				defer r.Close()
+			}
+
+			err := r.Unsubscribe()
+			if tt.returnErr {
+				assert.Error(t, err)
+				<-done
+			} else {
+				<-done
+				assert.NoError(t, err)
+			}
+		})
+	}
 }
 
 func setUpWSServerTest(handlerFunc http.HandlerFunc) *httptest.Server {
@@ -125,7 +199,11 @@ func successRequest(t *testing.T) func(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func WSRequest(t *testing.T, callback func(conn *websocket.Conn)) func(w http.ResponseWriter, r *http.Request) {
+func WSRequest(
+	t *testing.T,
+	callback func(conn *websocket.Conn),
+	done chan bool,
+) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		u := websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
@@ -137,5 +215,6 @@ func WSRequest(t *testing.T, callback func(conn *websocket.Conn)) func(w http.Re
 		defer conn.Close()
 
 		callback(conn)
+		done <- true
 	}
 }

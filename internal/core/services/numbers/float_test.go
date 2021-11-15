@@ -2,11 +2,21 @@ package numbers
 
 import "testing"
 
-func TestNewZeroBigFloat(t *testing.T) {
-}
-
 func TestParseBigFloat(t *testing.T) {
-}
+	tests := []struct {
+		name      string
+		value     string
+		returnErr bool
+	}{
+		{"valid float string", "4.23", false},
+		{"invalid float string", "invalid", true},
+	}
 
-func TestNewBigFloat(t *testing.T) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := ParseBigFloat(tt.value); err != nil && !tt.returnErr {
+				t.Error("Parsing test failed")
+			}
+		})
+	}
 }
