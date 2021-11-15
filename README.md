@@ -54,22 +54,31 @@ These are modules in this application
     * [handlers](./internal/handlers)
 
 
-#### cmd
-entry point for our server
+[comment]: <> (#### cmd)
 
-#### internal
-Contains all our application
+[comment]: <> (entry point for our server)
 
-#### core
-container port and services to access our app services
-#### services
-#### coinbase
-#### numbers
-#### vwap
-#### domain
-#### handlers
+[comment]: <> (#### internal)
 
-## Tasks
+[comment]: <> (Contains all our application)
+
+[comment]: <> (#### core)
+
+[comment]: <> (container port and services to access our app services)
+
+[comment]: <> (#### services)
+
+[comment]: <> (#### coinbase)
+
+[comment]: <> (#### numbers)
+
+[comment]: <> (#### vwap)
+
+[comment]: <> (#### domain)
+
+[comment]: <> (#### handlers)
+
+[comment]: <> (## Tasks)
 
 ### Functional Requirements
 - [x] read trade from coinbase websocket on a 'matches' channel
